@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 main.py)",
+      "Bash(python3 check_drive.py)",
+      "Bash(python main.py)",
+      "Bash(pip install:*)",
+      "Bash(python -m venv:*)",
+      "Read(//Users/skylermccoy/Code/remarkableNews/**)"
+    ],
+    "deny": [
+      "Read(//Users/skylermccoy/Code/remarkableNews/.env)"
+    ]
+  }
+}

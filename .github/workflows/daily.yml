@@ -1,0 +1,50 @@
+name: Daily news to reMarkable
+
+on:
+  schedule:
+    # GitHub cron is UTC. 11:00 UTC ≈ 6am US Central. Adjust to your timezone.
+    # Note: scheduled runs are best-effort and can be delayed 5–30+ min under load.
+    - cron: "0 11 * * *"
+  workflow_dispatch: {}   # lets you trigger a run manually from the Actions tab
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      # Persist the OneDrive token cache across runs. The refresh token rotates
+      # on each use, so each run restores the newest cache and saves an updated
+      # one (unique key + prefix restore-keys = rolling persistence, no secrets
+      # committed to the repo).
+      - name: Restore OneDrive token cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.remarkableNews
+          key: msal-token-${{ github.run_id }}
+          restore-keys: |
+            msal-token-
+
+      # On the very first run the cache is empty — seed it from a secret
+      # containing the token_cache.json you generated locally.
+      - name: Seed token cache (first run only)
+        run: |
+          mkdir -p ~/.remarkableNews
+          if [ ! -s ~/.remarkableNews/token_cache.json ]; then
+            printf '%s' "$MSAL_TOKEN_CACHE" > ~/.remarkableNews/token_cache.json
+          fi
+        env:
+          MSAL_TOKEN_CACHE: ${{ secrets.MSAL_TOKEN_CACHE }}
+
+      - name: Run pipeline
+        run: python main.py
+        env:
+          GUARDIAN_API_KEY: ${{ secrets.GUARDIAN_API_KEY }}
+          NEWSDATA_API_KEY: ${{ secrets.NEWSDATA_API_KEY }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
