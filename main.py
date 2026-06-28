@@ -4,6 +4,7 @@ from datetime import date
 
 from dotenv import load_dotenv
 
+from dailypress_client import fetch_full_edition
 from guardian_client import fetch_articles as fetch_guardian
 from newsdata_client import fetch_articles as fetch_newsdata
 from nyt_frontpage import fetch_front_page_scan
@@ -78,6 +79,24 @@ def main() -> None:
         print(f"  Done: {scan_url}")
     else:
         print("  No front-page scan available — skipping.")
+
+    # Daily Press — the whole e-edition as one multi-page PDF, resolved headlessly
+    # and resized for the Move. Best-effort, like the scan above.
+    print("Fetching Daily Press e-edition (headless)...")
+    try:
+        edition = fetch_full_edition()
+    except Exception as exc:  # Playwright/browser/network issues shouldn't fail the run
+        edition = None
+        print(f"  Daily Press fetch failed: {exc}")
+    if edition:
+        dp_bytes, dp_date = edition
+        dp_name = f"dailypress-{dp_date.isoformat()}.pdf"
+        dp_resized = resize_pdf_to_move(dp_bytes)
+        print(f"  {dp_date} edition resized to {len(dp_resized) / 1024 / 1024:.0f} MB; uploading {dp_name}...")
+        dp_url = upload_pdf(token, dp_name, dp_resized)
+        print(f"  Done: {dp_url}")
+    else:
+        print("  No Daily Press edition available — skipping.")
 
     print(f"Cleaning up digests older than {KEEP_DAYS} days...")
     removed = delete_old_pdfs(token, KEEP_DAYS, date.today())
