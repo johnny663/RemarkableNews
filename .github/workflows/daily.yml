@@ -20,6 +20,9 @@ jobs:
 
       - run: pip install -r requirements.txt
 
+      # Headless Chromium for resolving the Daily Press edition GUID.
+      - run: python -m playwright install --with-deps chromium
+
       # Persist the OneDrive token cache across runs. The refresh token rotates
       # on each use, so each run restores the newest cache and saves an updated
       # one (unique key + prefix restore-keys = rolling persistence, no secrets
