@@ -15,7 +15,14 @@ CACHE_PATH = Path.home() / ".remarkableNews" / "token_cache.json"
 def _load_cache() -> msal.SerializableTokenCache:
     cache = msal.SerializableTokenCache()
     if CACHE_PATH.exists():
-        cache.deserialize(CACHE_PATH.read_text())
+        data = CACHE_PATH.read_text()
+        if data.strip():
+            try:
+                cache.deserialize(data)
+            except ValueError:
+                # Corrupt/partial cache — start fresh rather than crash.
+                # A valid token still has to be seeded for headless (CI) auth.
+                pass
     return cache
 
 

@@ -32,14 +32,21 @@ jobs:
           restore-keys: |
             msal-token-
 
-      # On the very first run the cache is empty — seed it from a secret
-      # containing the token_cache.json you generated locally.
-      - name: Seed token cache (first run only)
+      # Seed the cache from the secret whenever the restored file is missing,
+      # empty, or not valid JSON. This self-heals a corrupt cache that a prior
+      # failed run may have saved (otherwise it gets restored forever).
+      - name: Seed token cache (if missing or invalid)
         run: |
           mkdir -p ~/.remarkableNews
-          if [ ! -s ~/.remarkableNews/token_cache.json ]; then
-            printf '%s' "$MSAL_TOKEN_CACHE" > ~/.remarkableNews/token_cache.json
+          f=~/.remarkableNews/token_cache.json
+          if ! python -c "import json,sys; json.load(open(sys.argv[1]))" "$f" 2>/dev/null; then
+            printf '%s' "$MSAL_TOKEN_CACHE" > "$f"
+            echo "Seeded token cache from secret."
+          else
+            echo "Restored a valid token cache from the previous run."
           fi
+          # Fail early with a clear message if the secret itself is bad
+          python -c "import json,sys; d=json.load(open(sys.argv[1])); assert d.get('RefreshToken'), 'no RefreshToken in cache'; print('Token cache OK')" "$f"
         env:
           MSAL_TOKEN_CACHE: ${{ secrets.MSAL_TOKEN_CACHE }}
 
