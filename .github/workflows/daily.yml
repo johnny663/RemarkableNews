@@ -2,9 +2,10 @@ name: Daily news to reMarkable
 
 on:
   schedule:
-    # GitHub cron is UTC. 11:00 UTC ≈ 6am US Central. Adjust to your timezone.
-    # Note: scheduled runs are best-effort and can be delayed 5–30+ min under load.
-    - cron: "0 11 * * *"
+    # GitHub cron is UTC and can't follow DST. 10:00 UTC = 6am EDT (summer) /
+    # 5am EST (winter). For a steady 6am EST in winter, change to "0 11 * * *".
+    # Scheduled runs are best-effort and can be delayed 5–30+ min under load.
+    - cron: "0 10 * * *"
   workflow_dispatch: {}   # lets you trigger a run manually from the Actions tab
 
 jobs:

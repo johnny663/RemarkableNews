@@ -9,8 +9,8 @@ from newsdata_client import fetch_articles as fetch_newsdata
 from onedrive_client import delete_old_pdfs, get_access_token, upload_pdf
 from pdf_builder import build_pdf
 
-GUARDIAN_MAX = 8     # full-text articles, placed first
-NEWSDATA_MAX = 12    # summary articles, placed after
+GUARDIAN_MAX = 12    # full-text articles
+NEWSDATA_MAX = 8     # summary articles, placed first
 KEEP_DAYS = 2        # delete digests older than this many days
 
 
