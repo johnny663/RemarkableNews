@@ -78,8 +78,9 @@ def upload_pdf(access_token: str, filename: str, pdf_bytes: bytes) -> str:
     return resp.json().get("webUrl", "uploaded")
 
 
-# Matches the names we generate, e.g. "news-2026-06-28.pdf"
-_NEWS_FILE = re.compile(r"^news-(\d{4}-\d{2}-\d{2})\.pdf$")
+# Matches the names we generate, e.g. "news-2026-06-28.pdf" and
+# "nyt-frontpage-2026-06-28.pdf". Other files in the folder are left alone.
+_NEWS_FILE = re.compile(r"^(?:news|nyt-frontpage)-(\d{4}-\d{2}-\d{2})\.pdf$")
 
 
 def delete_old_pdfs(access_token: str, keep_days: int, today: date) -> list[str]:

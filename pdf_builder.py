@@ -58,6 +58,36 @@ def _styles() -> dict:
     }
 
 
+def resize_pdf_to_move(pdf_bytes: bytes) -> bytes:
+    """Rescale every page of a PDF to fill the Move screen, preserving layout.
+
+    Used for the NYT front-page scan, which arrives at broadsheet dimensions.
+    Each page is scaled to fit inside PAGE_SIZE (no cropping) and centered, so
+    the whole page is visible at the device's aspect ratio. Lazily imports
+    pypdf so the digest build doesn't depend on it.
+    """
+    from pypdf import PageObject, PdfReader, PdfWriter, Transformation
+
+    target_w, target_h = PAGE_SIZE
+    reader = PdfReader(io.BytesIO(pdf_bytes))
+    writer = PdfWriter()
+
+    for src in reader.pages:
+        w = float(src.mediabox.width)
+        h = float(src.mediabox.height)
+        scale = min(target_w / w, target_h / h)
+        tx = (target_w - w * scale) / 2
+        ty = (target_h - h * scale) / 2
+
+        page = PageObject.create_blank_page(width=target_w, height=target_h)
+        page.merge_transformed_page(src, Transformation().scale(scale).translate(tx, ty))
+        writer.add_page(page)
+
+    out = io.BytesIO()
+    writer.write(out)
+    return out.getvalue()
+
+
 def _teaser(text: str, limit: int = 200) -> str:
     flat = re.sub(r"\s+", " ", text).strip()
     if len(flat) <= limit:
