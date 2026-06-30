@@ -3,10 +3,10 @@ name: Daily news to reMarkable
 on:
   schedule:
     # GitHub cron is UTC and can't follow DST.
-    # 10:00 UTC = 6am EDT (summer) / 5am EST (winter)
-    - cron: "0 10 * * *"
-    # 11:00 UTC = 7am EDT (summer) / 6am EST (winter)
-    - cron: "0 11 * * *"
+    # 9:00 UTC = 5am EDT (summer) / 4am EST (winter)
+    - cron: "0 9 * * *"
+    # 9:30 UTC = 5:30am EDT (summer) / 4:30am EST (winter)
+    - cron: "30 9 * * *"
   workflow_dispatch: {}   # lets you trigger a run manually from the Actions tab
 
 jobs:
@@ -24,10 +24,6 @@ jobs:
       # Headless Chromium for resolving the Daily Press edition GUID.
       - run: python -m playwright install --with-deps chromium
 
-      # Persist the OneDrive token cache across runs. The refresh token rotates
-      # on each use, so each run restores the newest cache and saves an updated
-      # one (unique key + prefix restore-keys = rolling persistence, no secrets
-      # committed to the repo).
       - name: Restore OneDrive token cache
         uses: actions/cache@v4
         with:
@@ -36,9 +32,6 @@ jobs:
           restore-keys: |
             msal-token-
 
-      # Seed the cache from the secret whenever the restored file is missing,
-      # empty, or not valid JSON. This self-heals a corrupt cache that a prior
-      # failed run may have saved (otherwise it gets restored forever).
       - name: Seed token cache (if missing or invalid)
         run: |
           mkdir -p ~/.remarkableNews
@@ -49,7 +42,6 @@ jobs:
           else
             echo "Restored a valid token cache from the previous run."
           fi
-          # Fail early with a clear message if the secret itself is bad
           python -c "import json,sys; d=json.load(open(sys.argv[1])); assert d.get('RefreshToken'), 'no RefreshToken in cache'; print('Token cache OK')" "$f"
         env:
           MSAL_TOKEN_CACHE: ${{ secrets.MSAL_TOKEN_CACHE }}
