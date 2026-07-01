@@ -61,7 +61,7 @@ The first run will print a URL and a code. Open the URL in a browser, enter the 
 
 ## Running on a schedule (GitHub Actions)
 
-The included workflow (`.github/workflows/daily.yml`) runs at **5:00am and 5:30am EDT** daily for free.
+The included workflow (`.github/workflows/daily.yml`) runs daily at **5:00am and 5:30am Eastern Daylight Time** for free. GitHub cron is UTC and doesn't follow DST, so in winter the runs land an hour earlier (4:00/4:30am EST) — edit the `cron` lines in the workflow if you want to compensate. Scheduled runs are best-effort and can be delayed by minutes to hours.
 
 ### Required GitHub secrets
 
@@ -80,4 +80,4 @@ Go to your repo → **Settings** → **Secrets and variables** → **Actions** �
 
 ## reMarkable setup
 
-On your tablet: **Settings → Storage → OneDrive** → connect your account → navigate to the `reMarkableNews` folder. New PDFs appear there each morning after the workflow runs.
+On your tablet, open **Settings → Integrations** and connect your OneDrive account, then browse to the `reMarkableNews` folder. New PDFs appear there each morning after the workflow runs.
