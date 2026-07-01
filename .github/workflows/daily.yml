@@ -3,17 +3,19 @@ name: Daily news to reMarkable
 on:
   schedule:
     # GitHub cron is UTC and can't follow DST. Scheduled runs are
-    # best-effort and can be delayed 5-30+ min (sometimes hours) under load.
-    # 9:00 UTC = 5am EDT (summer) / 4am EST (winter)
-    - cron: "0 9 * * *"
-    # 9:30 UTC = 5:30am EDT (summer) / 4:30am EST (winter)
-    - cron: "30 9 * * *"
+    # best-effort and drift badly under load (observed 2.5-4h late), so we
+    # aim well before the 5am ET target and use off-hour minutes, which
+    # drift less than the congested :00 slots.
+    # 7:23 UTC = 3:23am EDT / 2:23am EST — lands ~5am ET after typical drift
+    - cron: "23 7 * * *"
+    # 7:53 UTC = 3:53am EDT / 2:53am EST — second chance, same reasoning
+    - cron: "53 7 * * *"
   workflow_dispatch: {}   # lets you trigger a run manually from the Actions tab
 
 # Never run two jobs at once: each run restores and *rotates* the OneDrive
 # refresh token via the Actions cache, so overlapping runs would rotate it
 # out from under each other and save a stale cache as the newest entry.
-# Queued (not cancelled) so a delayed 5:00 run doesn't kill the 5:30 one.
+# Queued (not cancelled) so a delayed first run doesn't kill the second.
 concurrency:
   group: daily-news
   cancel-in-progress: false
