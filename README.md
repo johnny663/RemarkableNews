@@ -61,7 +61,7 @@ The first run will print a URL and a code. Open the URL in a browser, enter the 
 
 ## Running on a schedule (GitHub Actions)
 
-The included workflow (`.github/workflows/daily.yml`) runs daily at **5:00am and 5:30am Eastern Daylight Time** for free. GitHub cron is UTC and doesn't follow DST, so in winter the runs land an hour earlier (4:00/4:30am EST) — edit the `cron` lines in the workflow if you want to compensate. Scheduled runs are best-effort and can be delayed by minutes to hours.
+The included workflow (`.github/workflows/daily.yml`) runs twice daily, scheduled at **7:23 and 7:53 UTC**. GitHub Actions cron is best-effort and routinely runs 2–4 hours late, so these early slots are chosen deliberately: after typical drift the digest lands around **5am US Eastern**. If your timing needs differ, edit the `cron` lines in the workflow (remember GitHub cron is UTC and doesn't follow DST).
 
 ### Required GitHub secrets
 
