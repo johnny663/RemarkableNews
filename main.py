@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from dailypress_client import fetch_full_edition
 from guardian_client import fetch_articles as fetch_guardian
 from newsdata_client import fetch_articles as fetch_newsdata
-from nyt_frontpage import fetch_front_page_scan
+from nyt_frontpage import fetch_front_page_scan, fetch_intl_front_page_scan
 from onedrive_client import delete_old_pdfs, get_access_token, upload_pdf
 from pdf_builder import build_pdf, resize_pdf_to_move
 
@@ -79,6 +79,20 @@ def main() -> None:
         print(f"  Done: {scan_url}")
     else:
         print("  No front-page scan available — skipping.")
+
+    # NYT International Edition front page — same public scan mechanism as the
+    # US edition above (no Sunday paper). Best-effort as well.
+    print("Fetching NYT International front page...")
+    intl = fetch_intl_front_page_scan(date.today())
+    if intl:
+        intl_bytes, intl_date = intl
+        intl_name = f"nyt-intl-frontpage-{intl_date.isoformat()}.pdf"
+        intl_resized = resize_pdf_to_move(intl_bytes)
+        print(f"  {intl_date} page resized to {len(intl_resized) / 1024:.0f} KB; uploading {intl_name}...")
+        intl_url = upload_pdf(token, intl_name, intl_resized)
+        print(f"  Done: {intl_url}")
+    else:
+        print("  No International front page available — skipping.")
 
     # Daily Press — the whole e-edition as one multi-page PDF, resolved headlessly
     # and resized for the Move. Best-effort, like the scan above.
