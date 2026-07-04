@@ -7,18 +7,24 @@ from dotenv import load_dotenv
 from dailypress_client import fetch_full_edition
 from mailer import send_papers
 from nyt_frontpage import fetch_front_page_scan, fetch_intl_front_page_scan
-from onedrive_client import delete_old_pdfs, get_access_token, upload_pdf
+from onedrive_client import (
+    create_share_link,
+    delete_old_pdfs,
+    get_access_token,
+    upload_pdf,
+)
 from pdf_utils import resize_pdf_to_move
 
 KEEP_DAYS = 2  # delete papers older than this many days
 
 
-def _upload(token: str, name: str, pdf_bytes: bytes) -> bytes:
+def _upload(token: str, name: str, pdf_bytes: bytes) -> str:
+    """Resize, upload, and return an anonymous sharing link for the email."""
     resized = resize_pdf_to_move(pdf_bytes)
     print(f"  Resized to {len(resized) / 1024:.0f} KB; uploading {name}...")
     url = upload_pdf(token, name, resized)
     print(f"  Done: {url}")
-    return resized
+    return create_share_link(token, name)
 
 
 def main() -> None:
@@ -34,7 +40,7 @@ def main() -> None:
     print("Authenticating with OneDrive...")
     token = get_access_token(client_id)
 
-    papers: list[tuple[str, bytes]] = []  # (filename, resized bytes) for email
+    papers: list[tuple[str, str]] = []  # (filename, share link) for the email
 
     # Each paper is best-effort: one source being down shouldn't stop the
     # others from shipping. The run only fails if NOTHING uploads.
@@ -78,11 +84,11 @@ def main() -> None:
     else:
         print("  No Daily Press edition available — skipping.")
 
-    # Email the papers too — optional and best-effort: a mail failure never
-    # fails the run, since the papers are already up on OneDrive.
-    print("Emailing papers...")
+    # Email OneDrive links to the papers — optional and best-effort: a mail
+    # failure never fails the run, since the papers are already up on OneDrive.
+    print("Emailing paper links...")
     try:
-        send_papers(papers)
+        send_papers(papers, today)
     except Exception as exc:
         print(f"  Email failed: {exc}")
 

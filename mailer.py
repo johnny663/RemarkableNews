@@ -1,16 +1,12 @@
 import os
 import smtplib
+from datetime import date
 from email.message import EmailMessage
 from pathlib import Path
 
 # Recipients live in their own file so they can be edited without touching
 # code: one address per line, # comments and blank lines ignored.
 RECIPIENTS_FILE = Path(__file__).parent / "recipients.txt"
-
-# Providers cap attachments (iCloud/Gmail ~20-25 MB) and the full Daily Press
-# e-edition regularly exceeds that, so skip anything too big rather than have
-# the provider reject the message.
-MAX_ATTACHMENT_MB = 20
 
 
 def load_recipients() -> list[str]:
@@ -24,13 +20,13 @@ def load_recipients() -> list[str]:
     return recipients
 
 
-def send_papers(papers: list[tuple[str, bytes]]) -> int:
-    """Email each paper as its own PDF attachment to every recipient.
+def send_papers(papers: list[tuple[str, str]], today: date) -> int:
+    """Email one message with OneDrive links to today's papers.
 
-    One message per paper keeps each mail under provider attachment limits
-    (the Daily Press e-edition alone can run to many MB). Email is optional:
+    Links instead of attachments: no provider size limits, so even the
+    multi-MB Daily Press e-edition is deliverable. Email is optional:
     missing recipients or SMTP settings just skip with a note. Returns the
-    number of messages sent.
+    number of messages sent (0 or 1).
     """
     recipients = load_recipients()
     if not recipients:
@@ -43,32 +39,26 @@ def send_papers(papers: list[tuple[str, bytes]]) -> int:
     # In CI an unset secret arrives as an empty string, so `or` (not a
     # get-default) is what keeps int() from choking.
     port = int(os.environ.get("SMTP_PORT") or "587")
-    sender = os.environ.get("SMTP_FROM", user)
+    sender = os.environ.get("SMTP_FROM") or user
     if not (host and user and password):
         print("  SMTP_HOST/SMTP_USER/SMTP_PASS not set — skipping email.")
         return 0
 
-    sent = 0
+    lines = ["Today's papers:", ""]
+    for name, link in papers:
+        lines.append(f"{name.removesuffix('.pdf')}:")
+        lines.append(link)
+        lines.append("")
+
+    msg = EmailMessage()
+    msg["Subject"] = f"Martin Newspaper — {today.isoformat()}"
+    msg["From"] = sender
+    msg["To"] = ", ".join(recipients)
+    msg.set_content("\n".join(lines))
+
     with smtplib.SMTP(host, port, timeout=60) as smtp:
         smtp.starttls()
         smtp.login(user, password)
-        for name, pdf_bytes in papers:
-            size_mb = len(pdf_bytes) / 1024 / 1024
-            if size_mb > MAX_ATTACHMENT_MB:
-                print(
-                    f"  Skipping {name}: {size_mb:.0f} MB exceeds the "
-                    f"{MAX_ATTACHMENT_MB} MB attachment limit"
-                )
-                continue
-            msg = EmailMessage()
-            msg["Subject"] = f"Martin Newspaper — {name.removesuffix('.pdf')}"
-            msg["From"] = sender
-            msg["To"] = ", ".join(recipients)
-            msg.set_content("Attached: today's paper from RemarkableNews.")
-            msg.add_attachment(
-                pdf_bytes, maintype="application", subtype="pdf", filename=name
-            )
-            smtp.send_message(msg)
-            print(f"  Sent {name} to {len(recipients)} recipient(s)")
-            sent += 1
-    return sent
+        smtp.send_message(msg)
+    print(f"  Sent links for {len(papers)} paper(s) to {len(recipients)} recipient(s)")
+    return 1
