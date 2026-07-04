@@ -7,6 +7,11 @@ from pathlib import Path
 # code: one address per line, # comments and blank lines ignored.
 RECIPIENTS_FILE = Path(__file__).parent / "recipients.txt"
 
+# Providers cap attachments (iCloud/Gmail ~20-25 MB) and the full Daily Press
+# e-edition regularly exceeds that, so skip anything too big rather than have
+# the provider reject the message.
+MAX_ATTACHMENT_MB = 20
+
 
 def load_recipients() -> list[str]:
     if not RECIPIENTS_FILE.exists():
@@ -48,8 +53,15 @@ def send_papers(papers: list[tuple[str, bytes]]) -> int:
         smtp.starttls()
         smtp.login(user, password)
         for name, pdf_bytes in papers:
+            size_mb = len(pdf_bytes) / 1024 / 1024
+            if size_mb > MAX_ATTACHMENT_MB:
+                print(
+                    f"  Skipping {name}: {size_mb:.0f} MB exceeds the "
+                    f"{MAX_ATTACHMENT_MB} MB attachment limit"
+                )
+                continue
             msg = EmailMessage()
-            msg["Subject"] = name.removesuffix(".pdf")
+            msg["Subject"] = f"Martin Newspaper — {name.removesuffix('.pdf')}"
             msg["From"] = sender
             msg["To"] = ", ".join(recipients)
             msg.set_content("Attached: today's paper from RemarkableNews.")
