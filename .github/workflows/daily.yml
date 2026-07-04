@@ -74,3 +74,5 @@ jobs:
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          # From address when SMTP_USER isn't an email (e.g. SMTP2GO usernames)
+          SMTP_FROM: ${{ secrets.SMTP_FROM }}
