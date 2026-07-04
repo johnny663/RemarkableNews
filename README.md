@@ -1,83 +1,74 @@
 # RemarkableNews
 
-Fetches daily news from Guardian and NewsData.io, builds a reMarkable-sized PDF digest, and uploads it to OneDrive so your reMarkable tablet can sync it automatically.
+Daily e-newspapers for the reMarkable Paper Pro Move. Every morning it fetches:
+
+| Paper | What you get | Source |
+|---|---|---|
+| **New York Times** | Print front-page scan | NYT's free public daily scan |
+| **NYT International Edition** | Print front page (Mon–Sat) | NYT's free public daily scan |
+| **Daily Press** | The **whole e-edition**, every page | Public PageSuite CDN, resolved headlessly |
+
+Each PDF is rescaled to the Move's screen aspect and uploaded to the `reMarkableNews` folder in OneDrive, which the tablet syncs via its OneDrive integration. Papers older than 2 days are cleaned up automatically.
+
+The NYT full paper is subscriber-only; this fetches only its freely published front pages. Every source is best-effort — one paper being unavailable doesn't stop the others.
 
 ---
 
-## What you need
+## Setup
 
-| Credential | Where to get it |
-|---|---|
-| Guardian API key | [open-platform.theguardian.com/access](https://open-platform.theguardian.com/access/) — free, instant |
-| NewsData.io API key | [newsdata.io](https://newsdata.io) → Dashboard → API Key |
-| Azure Client ID | See OneDrive setup below |
-
----
-
-## OneDrive setup
-
-OneDrive access requires a one-time Azure app registration and a one-time login on your machine. After that, the token refreshes automatically.
+The only credential needed is an Azure app Client ID for OneDrive access.
 
 ### 1. Register an Azure app (one time)
 
 1. Go to [portal.azure.com](https://portal.azure.com) and sign in with the **same Microsoft account** your OneDrive is on.
-2. Search for **App registrations** → **New registration**.
-3. Give it any name (e.g. `RemarkableNews`).
-4. Under **Supported account types**, select **Personal Microsoft accounts only**.
-5. Click **Register**.
-6. Copy the **Application (client) ID** — this is your `AZURE_CLIENT_ID`.
-7. Go to **Authentication** → **Add a platform** → **Mobile and desktop applications**.
-8. Check the box for `https://login.microsoftonline.com/common/oauth2/nativeclient` and click **Configure**.
-9. On the same Authentication page, scroll down and toggle **Allow public client flows** to **Yes**. Save.
-10. Go to **API permissions** → **Add a permission** → **Microsoft Graph** → **Delegated** → search for `Files.ReadWrite` → Add.
+2. **App registrations** → **New registration**; any name; **Personal Microsoft accounts only**; Register.
+3. Copy the **Application (client) ID** — this is your `AZURE_CLIENT_ID`.
+4. **Authentication** → **Add a platform** → **Mobile and desktop applications** → check `https://login.microsoftonline.com/common/oauth2/nativeclient` → Configure.
+5. Still under Authentication, toggle **Allow public client flows** to **Yes**. Save.
+6. **API permissions** → **Add a permission** → **Microsoft Graph** → **Delegated** → `Files.ReadWrite` → Add.
 
-You do **not** need a client secret.
+No client secret is needed.
 
-### 2. Add your credentials to `.env`
-
-```bash
-cp .env.example .env
-```
-
-Open `.env` and fill in your values:
-
-```
-GUARDIAN_API_KEY=your_guardian_key
-NEWSDATA_API_KEY=your_newsdata_key
-AZURE_CLIENT_ID=your_azure_client_id   # from step 6 above
-```
-
-### 3. Run once to log in
+### 2. Run once locally to log in
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+python -m playwright install chromium
+cp .env.example .env      # fill in AZURE_CLIENT_ID
 python main.py
 ```
 
-The first run will print a URL and a code. Open the URL in a browser, enter the code, and sign in with your Microsoft account. After that, your token is saved to `~/.remarkableNews/token_cache.json` and all future runs are silent.
+The first run prints a URL and code — sign in once in a browser. The token is saved to `~/.remarkableNews/token_cache.json` and refreshes silently afterwards.
 
----
+### 3. Schedule it (GitHub Actions)
 
-## Running on a schedule (GitHub Actions)
+The included workflow (`.github/workflows/daily.yml`) runs twice daily, scheduled at **7:23 and 7:53 UTC**. GitHub Actions cron is best-effort and routinely runs 2–4 hours late, so these early slots are chosen deliberately: after typical drift the papers land around **5am US Eastern**. If your timing needs differ, edit the `cron` lines in the workflow (remember GitHub cron is UTC and doesn't follow DST).
 
-The included workflow (`.github/workflows/daily.yml`) runs twice daily, scheduled at **7:23 and 7:53 UTC**. GitHub Actions cron is best-effort and routinely runs 2–4 hours late, so these early slots are chosen deliberately: after typical drift the digest lands around **5am US Eastern**. If your timing needs differ, edit the `cron` lines in the workflow (remember GitHub cron is UTC and doesn't follow DST).
+Add two repository secrets (**Settings → Secrets and variables → Actions**):
 
-### Required GitHub secrets
-
-Go to your repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret** and add:
-
-| Secret name | Value |
+| Secret | Value |
 |---|---|
-| `GUARDIAN_API_KEY` | Your Guardian API key |
-| `NEWSDATA_API_KEY` | Your NewsData.io API key |
 | `AZURE_CLIENT_ID` | Your Azure app client ID |
-| `MSAL_TOKEN_CACHE` | Contents of `~/.remarkableNews/token_cache.json` (generated after your first local run) |
+| `MSAL_TOKEN_CACHE` | Contents of `~/.remarkableNews/token_cache.json` from step 2 |
 
-`MSAL_TOKEN_CACHE` is the most important one — it seeds OneDrive auth in CI. After the first successful run, the workflow keeps the token refreshed automatically via the Actions cache.
+The workflow keeps the rotating OneDrive token alive across runs via the Actions cache; the secret only seeds the first run.
 
 ---
 
 ## reMarkable setup
 
-On your tablet, open **Settings → Integrations** and connect your OneDrive account, then browse to the `reMarkableNews` folder. New PDFs appear there each morning after the workflow runs.
+On your tablet, open **Settings → Integrations** and connect your OneDrive account, then browse to the `reMarkableNews` folder. The morning's papers appear there after the workflow runs.
+
+---
+
+## Architecture
+
+| File | Responsibility |
+|---|---|
+| `main.py` | Orchestrator — fetch each paper (best-effort), resize, upload, prune |
+| `nyt_frontpage.py` | NYT US + International front-page scans from their date-keyed public URLs, 1-day lookback |
+| `dailypress_client.py` | Resolves the latest Daily Press edition GUID with headless Chromium, downloads the whole-paper PDF |
+| `pdf_utils.py` | Rescales any PDF to the Move's page size, centered, no cropping |
+| `onedrive_client.py` | MSAL device-code auth + Graph upload + age-based cleanup |
+| `check_drive.py` | Diagnostic — prints OneDrive quota + a test-upload error body |
