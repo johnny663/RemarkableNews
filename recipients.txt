@@ -1,0 +1,6 @@
+# Email addresses that receive the morning papers — one per line.
+# Lines starting with # (and blank lines) are ignored.
+#
+# Paste addresses below, e.g.:
+# someone@example.com
+# another@example.com

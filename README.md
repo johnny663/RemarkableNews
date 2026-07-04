@@ -56,6 +56,19 @@ The workflow keeps the rotating OneDrive token alive across runs via the Actions
 
 ---
 
+## Email delivery (optional)
+
+The pipeline can also email each paper as a PDF attachment.
+
+1. **Paste recipient addresses into `recipients.txt`** — one per line (`#` lines are ignored). No recipients = no email, silently skipped.
+2. **Set the SMTP settings** in `.env` (locally) or as repository secrets (for Actions): `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`. For Gmail, use `smtp.gmail.com` with an [App Password](https://myaccount.google.com/apppasswords) — your normal password won't work.
+
+Each paper goes out as its own message so attachments stay under provider size limits. Email is best-effort: a mail failure never fails the run, since the papers are already on OneDrive.
+
+> Note: if this repo is public, addresses in `recipients.txt` are publicly visible. Keep the repo private or use addresses you don't mind exposing.
+
+---
+
 ## reMarkable setup
 
 On your tablet, open **Settings → Integrations** and connect your OneDrive account, then browse to the `reMarkableNews` folder. The morning's papers appear there after the workflow runs.
