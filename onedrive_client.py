@@ -78,9 +78,10 @@ def upload_pdf(access_token: str, filename: str, pdf_bytes: bytes) -> str:
     return resp.json().get("webUrl", "uploaded")
 
 
-# Matches the names we generate, e.g. "news-2026-06-28.pdf",
-# "nyt-frontpage-2026-06-28.pdf", "nyt-intl-frontpage-2026-06-28.pdf",
-# "dailypress-2026-06-28.pdf". Other files in the folder are left alone.
+# Matches the names we generate, e.g. "nyt-frontpage-2026-06-28.pdf",
+# "nyt-intl-frontpage-2026-06-28.pdf", "dailypress-2026-06-28.pdf" — plus
+# "news-*" so leftovers from the retired article-digest pipeline still age
+# out. Other files in the folder are left alone.
 _NEWS_FILE = re.compile(r"^(?:news|nyt-frontpage|nyt-intl-frontpage|dailypress)-(\d{4}-\d{2}-\d{2})\.pdf$")
 
 

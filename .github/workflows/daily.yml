@@ -68,6 +68,4 @@ jobs:
       - name: Run pipeline
         run: python main.py
         env:
-          GUARDIAN_API_KEY: ${{ secrets.GUARDIAN_API_KEY }}
-          NEWSDATA_API_KEY: ${{ secrets.NEWSDATA_API_KEY }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
