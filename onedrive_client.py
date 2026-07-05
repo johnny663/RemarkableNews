@@ -78,6 +78,22 @@ def upload_pdf(access_token: str, filename: str, pdf_bytes: bytes) -> str:
     return resp.json().get("webUrl", "uploaded")
 
 
+def create_share_link(access_token: str, filename: str) -> str:
+    """Create an anonymous read-only sharing link for an uploaded file.
+
+    The webUrl returned by upload is owner-only; this mints a link anyone
+    can open (used in the daily email instead of attachments).
+    """
+    path = f"{REMARKABLE_FOLDER}/{filename}"
+    url = f"{GRAPH_BASE}/me/drive/root:/{path}:/createLink"
+    headers = {"Authorization": f"Bearer {access_token}"}
+    resp = requests.post(
+        url, headers=headers, json={"type": "view", "scope": "anonymous"}, timeout=30
+    )
+    resp.raise_for_status()
+    return resp.json()["link"]["webUrl"]
+
+
 # Matches the names we generate, e.g. "nyt-frontpage-2026-06-28.pdf",
 # "nyt-intl-frontpage-2026-06-28.pdf", "dailypress-2026-06-28.pdf" — plus
 # "news-*" so leftovers from the retired article-digest pipeline still age

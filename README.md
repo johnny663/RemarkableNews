@@ -58,12 +58,12 @@ The workflow keeps the rotating OneDrive token alive across runs via the Actions
 
 ## Email delivery (optional)
 
-The pipeline can also email each paper as a PDF attachment.
+The pipeline can also send one email each morning with OneDrive links to the day's papers (links, not attachments — so even the large Daily Press e-edition is included, with no size limits).
 
 1. **Paste recipient addresses into `recipients.txt`** — one per line (`#` lines are ignored). No recipients = no email, silently skipped.
-2. **Set the SMTP settings** in `.env` (locally) or as repository secrets (for Actions): `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`. For Gmail, use `smtp.gmail.com` with an [App Password](https://myaccount.google.com/apppasswords) — your normal password won't work.
+2. **Set the SMTP settings** in `.env` (locally) or as repository secrets (for Actions): `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` (optional `SMTP_FROM` if your provider's username isn't an email address). For Gmail, use `smtp.gmail.com` with an [App Password](https://myaccount.google.com/apppasswords) — your normal password won't work.
 
-Each paper goes out as its own message so attachments stay under provider size limits. Email is best-effort: a mail failure never fails the run, since the papers are already on OneDrive.
+The links are anonymous view links — anyone who has one can open that PDF. Email is best-effort: a mail failure never fails the run, since the papers are already on OneDrive.
 
 > Note: if this repo is public, addresses in `recipients.txt` are publicly visible. Keep the repo private or use addresses you don't mind exposing.
 
